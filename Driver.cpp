@@ -13,21 +13,22 @@ Vmicropop* Micropop;
 VerilatedVcdC* tfp;
 
 unsigned CycleCount = 0;
-unsigned StepsRemaining = 0;
+unsigned StepTarget = 0;
+bool Trace = true;
 
 void ClockPosedge() {
   CycleCount += 1;
-  tfp->dump(CycleCount*10-2);
+  if(Trace) tfp->dump(CycleCount*10-2);
   Micropop->eval();
   Micropop->Clock = 1;
   Micropop->eval();
-  tfp->dump(CycleCount*10);
+  if(Trace) tfp->dump(CycleCount*10);
 }
 
 void ClockNegedge() {
   Micropop->Clock = 0;
   Micropop->eval();
-  tfp->dump(CycleCount*10+5);
+  if(Trace) tfp->dump(CycleCount*10+5);
 }
 
 void ClockCycle() {
@@ -51,13 +52,19 @@ int main(int argc, char** argv) {
   Micropop->trace(tfp, 99);
   tfp->open("trace.vcd");
 
+  //uint16_t Instr[] = {0x4084, 0x4104, 0x4184, 0x4204, 0x4284, 0x4304, 0x4384, 0x4404};
   ResetSystem();
 
-  StepsRemaining = 16;
+  for(int i = 0; i < 16; i += 2) {
+    uint16_t Instr = 0x4004|(1<<7);
+    Micropop->rootp->micropop__DOT__InsturctionMemory__DOT__Memory[i] = Instr&0xFF;
+    Micropop->rootp->micropop__DOT__InsturctionMemory__DOT__Memory[i+1] = Instr>>8;
+  }
 
-  while(StepsRemaining > 0) {
+  StepTarget = 16;
+
+  while(CycleCount < StepTarget) {
     ClockCycle();
-    StepsRemaining -= 1;
   }
 
   tfp->close();
